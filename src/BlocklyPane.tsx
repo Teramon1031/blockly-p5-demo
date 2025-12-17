@@ -72,6 +72,34 @@ export function BlocklyPane({ onCode }: Props) {
           name: "Control",
           contents: [{ kind: "block", type: "controls_repeat_ext" }],
         },
+        {
+          kind: "category",
+          name: "Input",
+          contents: [
+            { kind: "block", type: "p5_mousex" },
+            { kind: "block", type: "p5_mousey" },
+            { kind: "block", type: "p5_framecount" },
+            {
+              kind: "block",
+              type: "p5_background_rgb",
+              inputs: {
+                R: { shadow: { type: "math_number", fields: { NUM: 30 } } },
+                G: { shadow: { type: "math_number", fields: { NUM: 30 } } },
+                B: { shadow: { type: "math_number", fields: { NUM: 60 } } },
+              },
+            },
+            {
+              kind: "block",
+              type: "p5_stroke",
+              inputs: {
+                GRAY: { shadow: { type: "math_number", fields: { NUM: 0 } } },
+              },
+            },
+            { kind: "block", type: "p5_nostroke" },
+          ],
+        },
+
+        // 値ブロック（Number出力）
       ],
     };
 
