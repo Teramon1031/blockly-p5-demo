@@ -6,16 +6,6 @@ export const toolbox: BlocklyOptions["toolbox"] = {
     // --- p5 core ---
     {
       kind: "category",
-      name: "p5 Flow",
-      colour: "#5C81A6",
-      contents: [
-        { kind: "block", type: "p5_setup" },
-        { kind: "block", type: "p5_draw" },
-      ],
-    },
-
-    {
-      kind: "category",
       name: "p5 Values",
       colour: "#5CA65C",
       contents: [

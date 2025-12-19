@@ -5,22 +5,26 @@ import { FieldColour } from "@blockly/field-colour";
  * p5 Flow
  */
 Blockly.Blocks["p5_setup"] = {
-  init: function () {
+  init() {
     this.appendDummyInput().appendField("setup (1回だけ)");
     this.appendStatementInput("DO").appendField("do");
     this.setColour(20);
-    // this.setDeletable(false);
-    this.setMovable(true);
+    this.setDeletable(false);
+    this.setMovable(false);
+    this.setEditable(true);
+    this.setTooltip("最初に1回だけ実行される処理");
   },
 };
 
 Blockly.Blocks["p5_draw"] = {
-  init: function () {
+  init() {
     this.appendDummyInput().appendField("draw (毎フレーム)");
     this.appendStatementInput("DO").appendField("do");
     this.setColour(20);
-    // this.setDeletable(false);
-    this.setMovable(true);
+    this.setDeletable(false);
+    this.setMovable(false);
+    this.setEditable(true);
+    this.setTooltip("毎フレーム実行される処理");
   },
 };
 

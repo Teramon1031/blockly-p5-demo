@@ -26,6 +26,45 @@ function firstBlock(
   return blocks.length > 0 ? blocks[0] : null;
 }
 
+type EnsureOneResult =
+  | { status: "ok"; block: Blockly.Block } // もともと1個
+  | { status: "created"; block: Blockly.Block } // 0個なので作った
+  | { status: "trimmed"; block: Blockly.Block }; // 2個以上なので間引いた
+
+function ensureOne(
+  ws: Blockly.WorkspaceSvg,
+  type: string,
+  opts?: { x?: number; y?: number }
+): EnsureOneResult {
+  const blocks = ws.getBlocksByType(type, false);
+
+  // 0個 → 作る
+  if (blocks.length === 0) {
+    const b = ws.newBlock(type);
+    b.initSvg();
+    b.render();
+    if (opts?.x != null && opts?.y != null) b.moveBy(opts.x, opts.y);
+    return { status: "created", block: b };
+  }
+
+  // 1個 → OK
+  if (blocks.length === 1) {
+    return { status: "ok", block: blocks[0] };
+  }
+
+  // 2個以上 → 先頭を残して消す（残す基準は好みでOK）
+  const keep = blocks[0];
+  for (let i = 1; i < blocks.length; i++) {
+    blocks[i].dispose(true);
+  }
+  return { status: "trimmed", block: keep };
+}
+
+function ensureP5Roots(ws: Blockly.WorkspaceSvg) {
+  ensureOne(ws, "p5_setup", { x: 20, y: 20 });
+  ensureOne(ws, "p5_draw", { x: 20, y: 220 });
+}
+
 export function BlocklyWorkspace({ onCode, onWorkspace }: Props) {
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +78,8 @@ export function BlocklyWorkspace({ onCode, onWorkspace }: Props) {
       scrollbars: true,
       grid: { spacing: 20, length: 3, colour: "#ddd", snap: true },
     });
+
+    ensureP5Roots(workspace);
 
     // paneのサイズ変更に追従
     const ro = new ResizeObserver(() => {
@@ -72,6 +113,7 @@ export function BlocklyWorkspace({ onCode, onWorkspace }: Props) {
 
     workspace.addChangeListener(listener);
     onWorkspace?.(workspace);
+    ensureP5Roots(workspace);
 
     // 初回も一度サイズ反映
     Blockly.svgResize(workspace);
