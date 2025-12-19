@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import * as Blockly from "blockly";
 import { javascriptGenerator } from "blockly/javascript";
 import { toolbox } from "./blocks/toolbox";
-import "blockly/blocks";
 
+import "blockly/blocks";
 import "./blocks/p5Blocks";
 import "./blocks/p5Generators";
 
@@ -26,7 +26,7 @@ function firstBlock(
   return blocks.length > 0 ? blocks[0] : null;
 }
 
-export function BlocklyPane({ onCode, onWorkspace }: Props) {
+export function BlocklyWorkspace({ onCode, onWorkspace }: Props) {
   const divRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,6 +40,13 @@ export function BlocklyPane({ onCode, onWorkspace }: Props) {
       grid: { spacing: 20, length: 3, colour: "#ddd", snap: true },
     });
 
+    // paneのサイズ変更に追従
+    const ro = new ResizeObserver(() => {
+      Blockly.svgResize(workspace);
+      workspace.scrollbar?.resize();
+    });
+    ro.observe(host);
+
     const update = () => {
       javascriptGenerator.init(workspace);
 
@@ -49,31 +56,31 @@ export function BlocklyPane({ onCode, onWorkspace }: Props) {
       const setupBody = setupBlock
         ? javascriptGenerator.statementToCode(setupBlock, "DO")
         : "";
-
       const drawBody = drawBlock
         ? javascriptGenerator.statementToCode(drawBlock, "DO")
         : "";
 
       const helpers = javascriptGenerator.finish("");
-      console.log(helpers);
 
       onCode({ setupBody, drawBody, helpers });
     };
 
     const listener = (e: Blockly.Events.Abstract) => {
-      if (e.isUiEvent) return; // ドラッグ/選択/スクロール等は無視
+      if (e.isUiEvent) return;
       update();
     };
 
     workspace.addChangeListener(listener);
-
-    // 外へ渡す（ここで loadWorkspace が走る想定）
     onWorkspace?.(workspace);
 
-    // 初回 + load 後も拾えるように最後に update
+    // 初回も一度サイズ反映
+    Blockly.svgResize(workspace);
+    workspace.scrollbar?.resize();
+
     update();
 
     return () => {
+      ro.disconnect();
       workspace.removeChangeListener(listener);
       workspace.dispose();
     };
