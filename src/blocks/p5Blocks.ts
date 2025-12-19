@@ -1,19 +1,92 @@
 import * as Blockly from "blockly";
+import { FieldColour } from "@blockly/field-colour";
 
-Blockly.Blocks["p5_background"] = {
+/**
+ * p5 Flow
+ */
+Blockly.Blocks["p5_setup"] = {
   init: function () {
-    this.appendValueInput("GRAY")
-      .setCheck("Number")
-      .appendField("background gray");
-    this.setPreviousStatement(true);
-    this.setNextStatement(true);
-    this.setColour(160);
+    this.appendDummyInput().appendField("setup (1回だけ)");
+    this.appendStatementInput("DO").appendField("do");
+    this.setColour(20);
+    // this.setDeletable(false);
+    this.setMovable(true);
   },
 };
 
-Blockly.Blocks["p5_fill"] = {
+Blockly.Blocks["p5_draw"] = {
   init: function () {
-    this.appendValueInput("GRAY").setCheck("Number").appendField("fill gray");
+    this.appendDummyInput().appendField("draw (毎フレーム)");
+    this.appendStatementInput("DO").appendField("do");
+    this.setColour(20);
+    // this.setDeletable(false);
+    this.setMovable(true);
+  },
+};
+
+/**
+ * p5 Values
+ */
+Blockly.Blocks["p5_color"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("color")
+      .appendField(new FieldColour("#ff0000"), "COLOR");
+    this.setOutput(true, "Colour"); // Blocklyの型名は英式
+    this.setColour(230);
+  },
+};
+
+Blockly.Blocks["p5_rgb"] = {
+  init: function () {
+    this.appendValueInput("R").setCheck("Number").appendField("rgb r");
+    this.appendValueInput("G").setCheck("Number").appendField("g");
+    this.appendValueInput("B").setCheck("Number").appendField("b");
+    this.setOutput(true, "Colour");
+    this.setColour(230);
+  },
+};
+
+Blockly.Blocks["p5_millis"] = {
+  init: function () {
+    this.appendDummyInput().appendField("millis");
+    this.setOutput(true, "Number");
+    this.setColour(230);
+  },
+};
+
+Blockly.Blocks["p5_mousex"] = {
+  init: function () {
+    this.appendDummyInput().appendField("mouseX");
+    this.setOutput(true, "Number");
+    this.setColour(230);
+  },
+};
+
+Blockly.Blocks["p5_mousey"] = {
+  init: function () {
+    this.appendDummyInput().appendField("mouseY");
+    this.setOutput(true, "Number");
+    this.setColour(230);
+  },
+};
+
+Blockly.Blocks["p5_mouseispressed"] = {
+  init: function () {
+    this.appendDummyInput().appendField("mouseIsPressed");
+    this.setOutput(true, "Boolean");
+    this.setColour(230);
+  },
+};
+
+/**
+ * p5 Draw
+ */
+Blockly.Blocks["p5_background"] = {
+  init: function () {
+    this.appendValueInput("COLOR")
+      .setCheck(["Number", "Colour"]) // グレー(数値)でも色(#rrggbb)でもOK
+      .appendField("background");
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(160);
@@ -43,33 +116,46 @@ Blockly.Blocks["p5_rect"] = {
   },
 };
 
-Blockly.Blocks["p5_mousex"] = {
+Blockly.Blocks["p5_line"] = {
   init: function () {
-    this.appendDummyInput().appendField("mouseX");
-    this.setOutput(true, "Number");
-    this.setColour(230);
+    this.appendValueInput("X1").setCheck("Number").appendField("line x1");
+    this.appendValueInput("Y1").setCheck("Number").appendField("y1");
+    this.appendValueInput("X2").setCheck("Number").appendField("x2");
+    this.appendValueInput("Y2").setCheck("Number").appendField("y2");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(160);
   },
 };
 
-Blockly.Blocks["p5_mousey"] = {
+/**
+ * p5 Style
+ */
+Blockly.Blocks["p5_fill"] = {
   init: function () {
-    this.appendDummyInput().appendField("mouseY");
-    this.setOutput(true, "Number");
-    this.setColour(230);
-  },
-};
-
-Blockly.Blocks["p5_framecount"] = {
-  init: function () {
-    this.appendDummyInput().appendField("frameCount");
-    this.setOutput(true, "Number");
-    this.setColour(230);
+    this.appendValueInput("COLOR")
+      .setCheck(["Number", "Colour"])
+      .appendField("fill");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(160);
   },
 };
 
 Blockly.Blocks["p5_stroke"] = {
   init: function () {
-    this.appendValueInput("GRAY").setCheck("Number").appendField("stroke gray");
+    this.appendValueInput("COLOR")
+      .setCheck(["Number", "Colour"])
+      .appendField("stroke");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(160);
+  },
+};
+
+Blockly.Blocks["p5_nofill"] = {
+  init: function () {
+    this.appendDummyInput().appendField("noFill");
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(160);
@@ -85,13 +171,53 @@ Blockly.Blocks["p5_nostroke"] = {
   },
 };
 
-Blockly.Blocks["p5_background_rgb"] = {
+Blockly.Blocks["p5_strokeweight"] = {
   init: function () {
-    this.appendValueInput("R").setCheck("Number").appendField("background r");
-    this.appendValueInput("G").setCheck("Number").appendField("g");
-    this.appendValueInput("B").setCheck("Number").appendField("b");
+    this.appendValueInput("W").setCheck("Number").appendField("strokeWeight");
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(160);
+  },
+};
+
+/**
+ * p5 Transform
+ */
+Blockly.Blocks["p5_push"] = {
+  init: function () {
+    this.appendDummyInput().appendField("push");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(120);
+  },
+};
+
+Blockly.Blocks["p5_pop"] = {
+  init: function () {
+    this.appendDummyInput().appendField("pop");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(120);
+  },
+};
+
+Blockly.Blocks["p5_translate"] = {
+  init: function () {
+    this.appendValueInput("X").setCheck("Number").appendField("translate x");
+    this.appendValueInput("Y").setCheck("Number").appendField("y");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(120);
+  },
+};
+
+Blockly.Blocks["p5_rotate"] = {
+  init: function () {
+    this.appendValueInput("A")
+      .setCheck("Number")
+      .appendField("rotate (radians)");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(120);
   },
 };

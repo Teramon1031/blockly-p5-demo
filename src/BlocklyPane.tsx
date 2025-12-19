@@ -1,125 +1,88 @@
 import { useEffect, useRef } from "react";
 import * as Blockly from "blockly";
 import { javascriptGenerator } from "blockly/javascript";
+import { toolbox } from "./blocks/toolbox";
+import "blockly/blocks";
 
 import "./blocks/p5Blocks";
 import "./blocks/p5Generators";
 
-type Props = {
-  onCode: (code: string) => void;
+export type P5Code = {
+  setupBody: string;
+  drawBody: string;
+  helpers: string;
 };
 
-export function BlocklyPane({ onCode }: Props) {
+type Props = {
+  onCode: (code: P5Code) => void;
+  onWorkspace?: (ws: Blockly.WorkspaceSvg) => void;
+};
+
+function firstBlock(
+  ws: Blockly.WorkspaceSvg,
+  type: string
+): Blockly.Block | null {
+  const blocks = ws.getBlocksByType(type, false);
+  return blocks.length > 0 ? blocks[0] : null;
+}
+
+export function BlocklyPane({ onCode, onWorkspace }: Props) {
   const divRef = useRef<HTMLDivElement>(null);
-  const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
 
   useEffect(() => {
-    if (!divRef.current) return;
+    const host = divRef.current;
+    if (!host) return;
 
-    const toolbox: Blockly.utils.toolbox.ToolboxDefinition = {
-      kind: "categoryToolbox",
-      contents: [
-        {
-          kind: "category",
-          name: "p5",
-          contents: [
-            {
-              kind: "block",
-              type: "p5_background",
-              inputs: {
-                GRAY: { shadow: { type: "math_number", fields: { NUM: 220 } } },
-              },
-            },
-            {
-              kind: "block",
-              type: "p5_fill",
-              inputs: {
-                GRAY: { shadow: { type: "math_number", fields: { NUM: 0 } } },
-              },
-            },
-            {
-              kind: "block",
-              type: "p5_circle",
-              inputs: {
-                X: { shadow: { type: "math_number", fields: { NUM: 200 } } },
-                Y: { shadow: { type: "math_number", fields: { NUM: 200 } } },
-                D: { shadow: { type: "math_number", fields: { NUM: 120 } } },
-              },
-            },
-            {
-              kind: "block",
-              type: "p5_rect",
-              inputs: {
-                X: { shadow: { type: "math_number", fields: { NUM: 40 } } },
-                Y: { shadow: { type: "math_number", fields: { NUM: 40 } } },
-                W: { shadow: { type: "math_number", fields: { NUM: 120 } } },
-                H: { shadow: { type: "math_number", fields: { NUM: 80 } } },
-              },
-            },
-          ],
-        },
-        {
-          kind: "category",
-          name: "Math",
-          contents: [
-            { kind: "block", type: "math_number" },
-            { kind: "block", type: "math_arithmetic" },
-            { kind: "block", type: "math_random_int" },
-          ],
-        },
-        {
-          kind: "category",
-          name: "Control",
-          contents: [{ kind: "block", type: "controls_repeat_ext" }],
-        },
-        {
-          kind: "category",
-          name: "Input",
-          contents: [
-            { kind: "block", type: "p5_mousex" },
-            { kind: "block", type: "p5_mousey" },
-            { kind: "block", type: "p5_framecount" },
-            {
-              kind: "block",
-              type: "p5_background_rgb",
-              inputs: {
-                R: { shadow: { type: "math_number", fields: { NUM: 30 } } },
-                G: { shadow: { type: "math_number", fields: { NUM: 30 } } },
-                B: { shadow: { type: "math_number", fields: { NUM: 60 } } },
-              },
-            },
-            {
-              kind: "block",
-              type: "p5_stroke",
-              inputs: {
-                GRAY: { shadow: { type: "math_number", fields: { NUM: 0 } } },
-              },
-            },
-            { kind: "block", type: "p5_nostroke" },
-          ],
-        },
-
-        // 値ブロック（Number出力）
-      ],
-    };
-
-    const workspace = Blockly.inject(divRef.current, {
+    const workspace = Blockly.inject(host, {
       toolbox,
       trashcan: true,
       scrollbars: true,
       grid: { spacing: 20, length: 3, colour: "#ddd", snap: true },
     });
-    workspaceRef.current = workspace;
 
     const update = () => {
-      const code = javascriptGenerator.workspaceToCode(workspace);
-      onCode(code);
+      javascriptGenerator.init(workspace);
+
+      const setupBlock = firstBlock(workspace, "p5_setup");
+      const drawBlock = firstBlock(workspace, "p5_draw");
+
+      const setupBody = setupBlock
+        ? javascriptGenerator.statementToCode(setupBlock, "DO")
+        : "";
+
+      const drawBody = drawBlock
+        ? javascriptGenerator.statementToCode(drawBlock, "DO")
+        : "";
+
+      const helpers = javascriptGenerator.finish("");
+      console.log(helpers);
+
+      onCode({ setupBody, drawBody, helpers });
     };
-    workspace.addChangeListener(update);
+
+    const listener = (e: Blockly.Events.Abstract) => {
+      if (e.isUiEvent) return; // ドラッグ/選択/スクロール等は無視
+      update();
+    };
+
+    workspace.addChangeListener(listener);
+
+    // 外へ渡す（ここで loadWorkspace が走る想定）
+    onWorkspace?.(workspace);
+
+    // 初回 + load 後も拾えるように最後に update
     update();
 
-    return () => workspace.dispose();
-  }, [onCode]);
+    return () => {
+      workspace.removeChangeListener(listener);
+      workspace.dispose();
+    };
+  }, [onCode, onWorkspace]);
 
-  return <div ref={divRef} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div
+      ref={divRef}
+      style={{ width: "100%", height: "100%", overflow: "hidden" }}
+    />
+  );
 }

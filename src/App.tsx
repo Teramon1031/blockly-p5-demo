@@ -1,12 +1,40 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { BlocklyPane } from "./BlocklyPane";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as Blockly from "blockly";
+import { BlocklyPane, type P5Code } from "./BlocklyPane";
 import { mountP5 } from "./p5Runner";
 
 const CANVAS_W = 400;
 const CANVAS_H = 400;
+const STORAGE_KEY = "blockly-workspace-v1";
+
+function saveWorkspace(ws: Blockly.WorkspaceSvg) {
+  const json = Blockly.serialization.workspaces.save(ws);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(json));
+}
+
+function loadWorkspace(ws: Blockly.WorkspaceSvg) {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+
+  const parsed: unknown = JSON.parse(raw);
+  if (typeof parsed !== "object" || parsed === null) return;
+
+  try {
+    Blockly.serialization.workspaces.load(
+      parsed as ReturnType<typeof Blockly.serialization.workspaces.save>,
+      ws
+    );
+  } catch {
+    console.error("Failed to load workspace");
+  }
+}
 
 export default function App() {
-  const [generated, setGenerated] = useState<string>("");
+  const [code, setCode] = useState<P5Code>({
+    setupBody: "",
+    drawBody: "",
+    helpers: "",
+  });
   const [autoRun, setAutoRun] = useState(true);
   const [animate, setAnimate] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,57 +45,98 @@ export default function App() {
     getError: () => string | null;
   } | null>(null);
 
+  const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
+  const restoringRef = useRef(false);
+
+  const handleWorkspace = useCallback((ws: Blockly.WorkspaceSvg) => {
+    workspaceRef.current = ws;
+
+    restoringRef.current = true;
+    loadWorkspace(ws);
+    requestAnimationFrame(() => {
+      restoringRef.current = false;
+    });
+  }, []);
+
+  const handleCode = useCallback((next: P5Code) => {
+    setCode(next);
+
+    // 復元中は localStorage へ保存しない（連打＆上書き事故回避）
+    if (restoringRef.current) return;
+
+    const ws = workspaceRef.current;
+    if (ws) saveWorkspace(ws);
+  }, []);
   const wrappedCode = useMemo(() => {
-    // animate が false のときは setupで1回だけ描いて noLoop にする
     if (!animate) {
       return `
-p.setup = () => {
-  p.createCanvas(${CANVAS_W}, ${CANVAS_H});
-  ${generated}
-  p.noLoop();
-};
-p.draw = () => {};
-`;
+      ${code.helpers}
+      p.setup = () => {
+        p.createCanvas(${CANVAS_W}, ${CANVAS_H});
+      ${code.setupBody}
+      ${code.drawBody}
+      console.log(${code.helpers});
+            console.log(${code.setupBody});
+            console.log(${code.drawBody});
+        p.noLoop();
+      };
+      p.draw = () => {};
+      `;
     }
 
-    // animate true: 毎フレーム draw 実行
     return `
-p.setup = () => {
-  p.createCanvas(${CANVAS_W}, ${CANVAS_H});
-};
+      ${code.helpers}
+      p.setup = () => {
+        p.createCanvas(${CANVAS_W}, ${CANVAS_H});
+      ${code.setupBody}
+      };
 
-p.draw = () => {
-${generated}
-};
-`;
-  }, [generated, animate]);
+      p.draw = () => {
+      ${code.drawBody}
+      };
+      `;
+  }, [code.drawBody, code.setupBody, animate]);
 
-  const run = () => {
-    if (!canvasHostRef.current) return;
+  const run = useCallback(() => {
+    const host = canvasHostRef.current;
+    if (!host) return;
+
     runningRef.current?.destroy();
-    runningRef.current = mountP5(canvasHostRef.current, wrappedCode);
+    runningRef.current = mountP5(host, wrappedCode);
     setError(runningRef.current.getError());
-  };
+  }, [wrappedCode]);
 
-  const stop = () => {
+  const stop = useCallback(() => {
     runningRef.current?.destroy();
     runningRef.current = null;
     if (canvasHostRef.current) canvasHostRef.current.innerHTML = "";
-  };
+  }, []);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     stop();
     run();
-  };
+  }, [stop, run]);
 
-  // Blockly変更で自動Run（授業で強い）
   useEffect(() => {
+    // AutoRun：復元中・入力中・ドラッグ中は走らせない
     if (!autoRun) return;
-    // 連打しすぎ防止の軽いデバウンス
-    const t = window.setTimeout(() => run(), 120);
+    if (restoringRef.current) return;
+    if (Blockly.WidgetDiv.isVisible()) return;
+
+    const ws = workspaceRef.current;
+    // ドラッグ中は邪魔しない（型の都合で存在確認）
+    const maybeDragging =
+      ws &&
+      typeof (ws as unknown as { isDragging?: () => boolean }).isDragging ===
+        "function" &&
+      (ws as unknown as { isDragging: () => boolean }).isDragging();
+
+    if (maybeDragging) return;
+
+    // タイピングのデバウンス
+    const t = window.setTimeout(() => run(), 300);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generated, animate, autoRun]);
+  }, [autoRun, code, animate, run]);
 
   return (
     <div
@@ -102,15 +171,28 @@ ${generated}
           </label>
         </div>
         <div style={{ height: "calc(100% - 44px)" }}>
-          <BlocklyPane onCode={setGenerated} />
+          <BlocklyPane onCode={handleCode} onWorkspace={handleWorkspace} />
         </div>
       </div>
 
       {/* Right: Code + Canvas */}
       <div
-        style={{ minWidth: 0, display: "grid", gridTemplateRows: "1fr 1fr" }}
+        style={{
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+        }}
       >
-        <div style={{ borderBottom: "1px solid #e5e5e5", minHeight: 0 }}>
+        {/* Generated JS */}
+        <div
+          style={{
+            borderBottom: "1px solid #e5e5e5",
+            maxHeight: "40%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <div
             style={{
               padding: 10,
@@ -145,15 +227,16 @@ ${generated}
             style={{
               margin: 0,
               padding: 10,
-              height: "calc(100% - 44px)",
               overflow: "auto",
               background: "#fafafa",
+              flex: 1,
             }}
           >
             <code>{wrappedCode}</code>
           </pre>
         </div>
 
+        {/* Canvas */}
         <div style={{ minHeight: 0 }}>
           <div
             style={{
