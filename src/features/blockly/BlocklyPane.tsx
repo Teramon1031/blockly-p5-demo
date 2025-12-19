@@ -17,7 +17,7 @@ export function BlocklyPane({
   onWorkspace,
 }: Props) {
   return (
-    <div style={{ height: "100%", borderRight: "1px solid #e5e5e5" }}>
+    <div style={{ height: "100vh", borderRight: "1px solid #e5e5e5" }}>
       <PaneShell
         header={
           <HeaderBar
